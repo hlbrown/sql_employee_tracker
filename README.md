@@ -1,9 +1,17 @@
 # sql_employee_tracker
 
+## Walk through video link
+
+https://youtu.be/Q3FuihD61f4
+
+## GitHub Repo
+https://github.com/hlbrown/sql_employee_tracker
+
 
 
 ## How to start
- The first thing you'll need to do is run npm i to get all of the correct files needed to run the application. After that step is complete you'll need to run ' node server.js '. the application should begin asking you questions and await your input. Th
+ The first thing you'll need to do is run npm i to get all of the correct files needed to run the application. After that step is complete you'll need to run ' node server.js '. the application should begin asking you questions and await your input. Once your input is given the database will show the given tables depending on the request the user sends. 
+ 
 ## Expected Behavior
 GIVEN a command-line application that accepts user input
 
