@@ -2,7 +2,8 @@
 
 
 
-
+## How to start
+ The first thing you'll need to do is run npm i to get all of the correct files needed to run the application. After that step is complete you'll need to run ' node server.js '. the application should begin asking you questions and await your input. Th
 ## Expected Behavior
 GIVEN a command-line application that accepts user input
 

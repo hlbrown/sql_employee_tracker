@@ -14,6 +14,8 @@ const role = require('./lib/Role');
 //const department = require('./lib/Department');
 const employee = require('./lib/Employee');
 
+const department = require('./lib/Department');
+
 
 //Connect to database
 const db = mysql.createConnection(
@@ -142,21 +144,18 @@ function getempFN(){
 
 //View all the departments
 function viewAllDepartments(){
-    const query = "SELECT id, name FROM department;";  
+    const query = "SELECT id, name FROM department";  
     db.query(query, function (err, table) {
-        if (err){
-            console.log(err);
-        }
+        if (err) throw err;
         console.table(table)
-        startingPrompt();
-         
+        startingPrompt();       
     
         });
 }
 
 //view all employees
 function viewAllEmployees(){
-    const query = `SELECT e.id AS "ID", e.first_name AS "First Name", e.last_name AS "Last Name", d.name AS "Department Name", r.title AS "Role Title", r.salary AS "Salary", CONCAT(x.first_name, " ", x.last_name) AS "Manager Name"
+    const query = `SELECT e.id, e.first_name, e.last_name, d.name, r.title AS job_title, r.salary, CONCAT(x.first_name, " ", x.last_name) AS manager_name
     FROM employee e LEFT JOIN role r ON e.role_id = r.id LEFT JOIN department d ON d.id = r.department_id LEFT JOIN employee x ON e.manager_id = x.id`;
 
     db.query(query, function (err, results) {
@@ -169,7 +168,7 @@ function viewAllEmployees(){
 
 //View all roles
 function viewAllRoles(){
-    const query = `SELECT r.title AS "Title", r.id AS "Role ID", d.name AS "Department Name", r.salary AS "Salary" FROM role r LEFT JOIN department d ON d.id = r.department_id`;
+    const query = `SELECT * FROM role`;
 
     db.query(query, (err, results) => {
         if(err) throw err;
@@ -182,22 +181,27 @@ function viewAllRoles(){
 
 //add department
 function addDepartment() {
-    inquirer.prompt({
+    inquirer.prompt([
+        {
         name: "departmentName",
         type: "input",
         message: "Enter the name of the new department:",
-    })
+       },
+    ])    
     .then(data => {
-        db.query(`INSERT INTO department (name) VALUES ("${data.departmentName}");`,
-        (err, res) => {
-            if(err) {
-                console.log(err);
-            }
+        let newDept = data.departmentName;
+        let newDeptID = depts.length + 1;
+
+        let addNewDept = new department(newDept, newDeptID);
+
+        db.query(`INSERT INTO department SET ?`, addNewDept, (err, res) => {
+            if(err) throw err;
             viewAllDepartments();
-            startingPrompt();
         });
+        startingPrompt();
     });
 }
+
 //Add employee
 
 function addEmployee(){
@@ -302,7 +306,7 @@ function addRole(){
         let newRoleId = roles.length + 1;
 
         let addNewRole = new role(newRoleName, newRoleSalary, newRoleId);
-        db.query(`INSERT INTO role SET ?`, addNewRole, function (err, res) {//adding the role to the database
+        db.query(`INSERT INTO role SET ?`, addNewRole, (err, res) => {//adding the role to the database
                 if (err) throw err;
                 viewAllRoles();//showing the updated list of roles
         });
@@ -313,96 +317,41 @@ function addRole(){
 /////Function to update employee role
 
 function updateRole(){
-    inquirer.prompt([
-        {
-            name: 'first_name',
-            type: 'list',
-            message: 'Choose employees role to update',
-            choices: empFN,
-
-        },
-    ])
-    .then(data => {
-        const query = `SELECT last_name FROM employee WHERE first_name = ?`;
-
-        db.query(query, [data.first_name], (err, res) => {
-            let firstNameRoleUpdate = data.first_name;
-            inquirer.prompt([{
-                name: 'last_name',
-                type: 'list',
-                message: 'Enter the last name of the employees role you want to update',
-                choices: function () {
-                    let lastNameArray = [];
-                    for (let i = 0; i < res.length; i++){
-                        lastNameArray.push(res[i].last_name);
-                    }
-                    return lastNameArray;
-                },
+inquirer.prompt([
+    {
+        name: "id",
+        type: "input",
+        message: "Enter the ID of the employee you want to update:"
+    },
+    {
+        name: "role_id",
+        type: "input",
+        message: "Enter the new role id for the employee"
+    }
+])
+.then(function(userInput){
+    console.log("Updating employee role")
+    var query = db.query(
+        "UPDATE employee SET ? WHERE ?",
+        [
+            {
+                role_id: userInput.role_id
             },
-        ])
-        .then(data => {
-            let lastNameRoleUpdate = data.last_name;
-            const query = `SELECT id FROM employee WHERE first_name = ? AND last_name = ?`;
+            {
+                id: userInput.id
+            },
+        ],
+        function(err, res){
+            if(err) throw err;
 
-            db.query(query, [firstNameRoleUpdate, lastNameRoleUpdate], (err, res) => {
-                inquirer.prompt([
-                    {
-                        name: 'id',
-                        type: 'list',
-                        message: 'Enter the ID of the employee to update their role.',
-                        choices: function(){
-                            let empID = [];
-                            for (let m =0; m < res.length; m++){
-                                empID.push(res[m].id);
-                            }
-                            return empID;
-                        },
-                    },
-                ])
-                .then(data =>{
-                    let roleUpdateByID = data.id;
-                    inquirer.prompt([
-                        {
-                            name:'role_title',
-                            type: 'list',
-                            message: 'Enter a new role for the employee:',
-                            choices: roles,
-                        },
-                    ])
-                    .then(data => {
-                        let newRole = data.role_title;
-
-                        function getNewRoleID(){
-                            for (let q = 0; q < roleID.length; q++){
-                                if(roleID[q].title === data.role_title){
-                                    return roleID[q].id;
-                                }
-                            }
-                        }
-                        let updateRoleID = getNewRoleID();
-                        inquirer.prompt([
-                            {
-                                name: 'removed',
-                                type: 'list',
-                                message: 'Confirm Update:',
-                                choices: ['YES', 'NO'],
-                            },
-                        ])
-                        .then(data => {
-                            if (data.removed === 'YES'){
-                                db.query('UPDATE employee SET role_id = ? WHERE first_name = ? AND last_name = ? AND id =?', [updateRoleID, firstNameRoleUpdate, lastNameRoleUpdate, roleUpdateByID], (err, res) => {
-                                    if (err) throw err;
-                                })
-                                startingPrompt();
-                            }
-                        });
-                    });
-                });
-            });
-        });
-        });
-    })
+            console.log(res.affectedRows + "was successfully updated");
+            startingPrompt();
+        }
+    )
+})
+ 
 }
+
 
 db.connect(function (err) {
     if (err) throw err;
